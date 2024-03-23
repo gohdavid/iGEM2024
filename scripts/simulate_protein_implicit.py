@@ -71,8 +71,10 @@ def main():
 
     # Identify non-water atoms for the HDF5Reporter
     non_water_atoms = [atom.index for atom in modeller.topology.atoms() if atom.residue.name not in ['HOH', 'WAT']]
-    hdf5_reporter = md.reporters.HDF5Reporter((output_folder / 'output.h5').as_posix(), reportInterval=12500, atomSubset=non_water_atoms)
-    statedata_reporter = app.StateDataReporter((output_folder / 'output.csv').as_posix(), reportInterval=12500, step=True, potentialEnergy=True, temperature=True)
+    freq = 12500
+    hdf5_reporter = md.reporters.HDF5Reporter((output_folder / 'output.h5').as_posix(), reportInterval=freq, atomSubset=non_water_atoms)
+    statedata_reporter = app.StateDataReporter((output_folder / 'output.csv').as_posix(), reportInterval=freq, step=True, potentialEnergy=True, temperature=True,
+                                               time = True, density = True, remainingTime = True, speed = True)
     checkput_reporter = app.CheckpointReporter((output_folder / 'checkput.chk').as_posix(), reportInterval=freq)
     simulation.reporters.append(hdf5_reporter)
     simulation.reporters.append(statedata_reporter)
