@@ -1,0 +1,22 @@
+hostname: d-14-11-1
+timestamp: 2024-03-23T17:37:57.702383
+openmm_version: 8.1.1.dev-ec797ac
+cpuinfo: Intel(R) Xeon(R) Gold 6248 CPU @ 2.50GHz
+cpuarch: x86_64
+system: Linux
+nvidia_driver: 525.105.17
+gpu: Tesla V100-PCIE-32GB
+test: pme
+constraints: HBonds
+hydrogen_mass: 1.5
+cutoff: 0.9
+ensemble: NVT
+precision: single
+timestep_in_fs: 4.0
+platform: CUDA
+platform_properties: {'DeviceIndex': '0', 'DeviceName': 'Tesla V100-PCIE-32GB', 'UseBlockingSync': 'false', 'Precision': 'single', 'UseCpuPme': 'false', 'CudaCompiler': '', 'TempDirectory': '/tmp', 'CudaHostCompiler': '', 'DisablePmeStream': 'false', 'DeterministicForces': 'false'}
+steps: 26884
+elapsed_time: 9.756849
+ns_per_day: 952.2654701328264
+
+python benchmark.py --platform=CUDA --test=pme --seconds=10
