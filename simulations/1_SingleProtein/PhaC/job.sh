@@ -7,7 +7,7 @@ source ~/.bashrc
 mamba activate md
 
 /rds/general/user/d21/home/iGEM/scripts/simulate_protein_implicit.py \
--i /rds/general/user/d21/home/iGEM/PDBs/ \
+-i /rds/general/user/d21/home/iGEM/PDBs/PhaC_Single.pdb \
 -o $(pwd) \
 -t 1000 \
 -w 1
