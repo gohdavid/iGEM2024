@@ -15,12 +15,14 @@ def main():
     parser.add_argument('-i', '--input', required=True, help='Input PDB file name.')
     parser.add_argument('-o', '--output', required=True, help='Output folder path.')
     parser.add_argument('-t', '--time', required=True, help='Simulation time in ns.')
+    parser.add_argument('-w', '--water', required=True, help='0 for implicit, 1 for explicit')
     
     args = parser.parse_args()
 
     input_file = Path(args.input)
     output_folder = Path(args.output)
     simulation_time = np.float64(args.time)
+    water = bool(args.water)
 
     # Check if input file exists
     if not input_file.is_file():
@@ -33,18 +35,32 @@ def main():
 
     # Load the PDB structure
     pdb = app.PDBFile(input_file.as_posix())
+    modeller = app.Modeller(pdb.topology, pdb.positions)
 
-    # Add solvent with a specified ionic strength
-    forcefield = app.ForceField('amber14/protein.ff14SB.xml','amber14/tip3p.xml')
-
-    # Set up the system
-    system = forcefield.createSystem(pdb.topology, nonbondedMethod=app.PME, nonbondedCutoff=0.9*unit.nanometers, constraints=app.HBonds,
-                                     hydrogenMass=1.5*unit.amu, ewaldErrorTolerance=0.0005) # Use HMR
+    if water:
+        # Add solvent with a specified ionic strength
+        forcefield = app.ForceField('amber14/protein.ff14SB.xml','amber14/tip3p.xml')
+        # Set up the system
+        system = forcefield.createSystem(pdb.topology, nonbondedMethod=app.PME, nonbondedCutoff=0.9*unit.nanometers, constraints=app.HBonds,
+                                        hydrogenMass=1.5*unit.amu, ewaldErrorTolerance=0.0005) # Use HMR
+        # Add pressure
+        barostat = MonteCarloBarostat(1*unit.bar,310.15*unit.kelvin)
+        barostat_id = system.addForce(barostat)
+    else:
+        # Use implicit water
+        modeller.deleteWater()
+        ion_residues = ['NA', 'CL']
+        # Find all ion residues to delete
+        residues_to_delete = [residue for residue in modeller.topology.residues() if residue.name.upper() in ion_residues]
+        # Remove the ion residues
+        if residues_to_delete:
+            modeller.delete(residues_to_delete)
+        # Add solvent with a specified ionic strength
+        forcefield = app.ForceField('amber14/protein.ff14SB.xml', 'implicit/obc2.xml')
+        # Set up the system
+        system = forcefield.createSystem(modeller.topology, nonbondedMethod=app.CutoffNonPeriodic, nonbondedCutoff=2*unit.nanometers, constraints=app.HBonds,
+                                        hydrogenMass=1.5*unit.amu, implicitSolventKappa=1.0/unit.nanometer) # Use HMR
     
-    # Add pressure
-    barostat = MonteCarloBarostat(1*unit.bar,310.15*unit.kelvin)
-    barostat_id = system.addForce(barostat)
-
     # Configure the integrator to use for the simulation
     temperature = 298.15*unit.kelvin
     friction = 1.0/unit.picoseconds
@@ -67,7 +83,7 @@ def main():
     freq = 12500
     hdf5_reporter = md.reporters.HDF5Reporter((output_folder / 'output.h5').as_posix(), reportInterval=freq, atomSubset=non_water_atoms)
     statedata_reporter = app.StateDataReporter((output_folder / 'output.csv').as_posix(), reportInterval=freq, step=True, potentialEnergy=True, temperature=True,
-                                               time = True, density = True, remainingTime = True, speed = True)
+                                               time = True, density = True, speed = True)
     checkput_reporter = app.CheckpointReporter((output_folder / 'checkput.chk').as_posix(), reportInterval=freq)
     simulation.reporters.append(hdf5_reporter)
     simulation.reporters.append(statedata_reporter)

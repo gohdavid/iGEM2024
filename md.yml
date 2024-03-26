@@ -1,0 +1,15 @@
+channels:
+  - conda-forge
+dependencies:
+  - python >=3.10, <3.11
+  - pip
+  - scikit-learn
+  - matplotlib
+  - ipykernel
+  - pandas
+  - tqdm
+  - openmm
+  - openmmtools
+  - ipywidgets=8.0.6
+  - nglview=3.0.6
+  - openmmforcefields
