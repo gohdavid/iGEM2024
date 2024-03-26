@@ -76,7 +76,37 @@ def main():
     simulation.context.setPositions(pdb.positions)
 
     # Minimize the energy
-    simulation.minimizeEnergy()
+    n_steps = 10000
+    simulation.minimizeEnergy(maxIterations=n_steps)
+    # Add positons restraints
+    restraint = CustomExternalForce('k/2*periodicdistance(x, y, z, x0, y0, z0)^2')
+    # Use 5 kcal per mol per A**2 or 500 kcal per mol per nm**2 force constant
+    restraint.addGlobalParameter('k', 500*unit.kilocalories_per_mole/unit.nanometer**2)
+    restraint.addPerParticleParameter('x0')
+    restraint.addPerParticleParameter('y0')
+    restraint.addPerParticleParameter('z0')
+    # Use mdtraj to select indices for non-solvent heavy molecules
+    u = md.load_pdb(input_file)
+    sele = u.topology.select("not water and not type H")
+    for idx in sele:
+        restraint.addParticle(idx, modeller.positions[idx])
+    restraint_id = system.addForce(restraint)
+    # Reinitialize the context to update the adition of the position restraints
+    # Preserve coordinates from energy minimization
+    simulation.context.reinitialize(preserveState=True)
+    # Get velocities at physiological temperature from Maxwell-Boltzmann distribution
+    simulation.context.setVelocitiesToTemperature(temperature)
+    # Set barosat frequency to zero for NVT ensemble
+    barostat.setFrequency(0)
+    simulation.step(100 * unit.picosceconds/timestep) # 100 ps for 4 fs time-step
+    # NPT equilibration for 1 ns
+    # Set barosat frequency to default value for NPT ensemble
+    barostat.setFrequency(25)
+    simulation.step(1 * unit.nanoseconds/timestep) # 1 ns for 4 fs time-step
+    # Remove position restraint force
+    system.removeForce(restraint_id)
+    # Reinitialize the context to update the removal of the positon restraints
+    simulation.context.reinitialize(preserveState=True)
 
     # Identify non-water atoms for the HDF5Reporter
     non_water_atoms = [atom.index for atom in pdb.topology.atoms() if atom.residue.name not in ['HOH', 'WAT']]
@@ -88,27 +118,8 @@ def main():
     simulation.reporters.append(hdf5_reporter)
     simulation.reporters.append(statedata_reporter)
     simulation.reporters.append(checkput_reporter)
-
-    # Equilibration: running a short simulation to relax the structure
-    equilibration_steps = np.round((simulation_time*unit.nanoseconds)/(4*unit.femtoseconds))  # Number of steps to equilibrate
     
-    # Time the simulation for a short run of 1000 steps
-    start_time = time.time()
-    short_run = 12500*4
-    simulation.step(short_run)
-    end_time = time.time()
-
-    # Calculate the elapsed time for the short run
-    elapsed_time = end_time - start_time
-
-    # Estimate the total wall time for the equilibration run based on the short run
-    estimated_total_time = (elapsed_time / short_run) * (equilibration_steps-short_run)
-    
-    hours = estimated_total_time/60/60
-    print(f"Takes {hours} hours.")
-    sys.stdout.flush()
-    
-    simulation.step(equilibration_steps-short_run)
+    simulation.runForClockTime(simulation_time * unit.hours)
 
     # Don't forget to close the reporter when done to ensure data is properly saved
     hdf5_reporter.close()
