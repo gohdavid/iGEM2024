@@ -98,7 +98,7 @@ def main():
     simulation.context.setVelocitiesToTemperature(temperature)
     # Set barosat frequency to zero for NVT ensemble
     barostat.setFrequency(0)
-    simulation.step(100 * unit.picosceconds/timestep) # 100 ps for 4 fs time-step
+    simulation.step(100 * unit.picoseconds/timestep) # 100 ps for 4 fs time-step
     # NPT equilibration for 1 ns
     # Set barosat frequency to default value for NPT ensemble
     barostat.setFrequency(25)

@@ -1,1 +1,6 @@
 slurm*
+*.csv
+*.h5
+*.chk
+*.mp4
+*.pyc
