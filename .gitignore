@@ -4,3 +4,4 @@ slurm*
 *.chk
 *.mp4
 *.pyc
+*.ipynb_checkpoints
